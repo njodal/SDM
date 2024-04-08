@@ -6,7 +6,7 @@ general:
         call: test_create_hard_locations
         cases:
           - case:
-              input:  [10, 10, 20, 2, True]
+              input:  [10, 10, 10, 20, 2, True]
               output: 10
 
     - test:

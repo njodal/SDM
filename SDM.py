@@ -8,7 +8,9 @@ class SDM(object):
     see: https://en.wikipedia.org/wiki/Sparse_distributed_memory
     """
 
-    def __init__(self, content_length, number_of_hard_locations, radius, values_per_dimension=2, debug=False):
+    def __init__(self, address_length, content_length, number_of_hard_locations, radius, values_per_dimension=2,
+                 debug=False):
+        self.address_length           = address_length
         self.content_length           = content_length
         self.values_per_dimensions    = values_per_dimension
         self.max_possible_values      = self.values_per_dimensions ** self.content_length
@@ -17,8 +19,11 @@ class SDM(object):
 
         self.hard_locations = self.create_uniform_hard_locations(debug=debug)
 
-    def write(self, content):
-        pass
+    def write(self, address, content):
+        for hard_location in self.get_hard_locations_in_distance(address, self.radius):
+            for i, bit in enumerate(content):
+                inc = 1 if bit == '1' else -1
+                hard_location[1][i] += inc
 
     def read(self, content):
         return content
@@ -87,8 +92,10 @@ def hamming_distance(binary1, binary2):
 
 
 # Tests
-def test_create_hard_locations(content_length, number_of_hard_locations, radius, values_per_dimension, debug):
-    sdm = SDM(content_length, number_of_hard_locations, radius, values_per_dimension=values_per_dimension, debug=debug)
+def test_create_hard_locations(address_length,content_length, number_of_hard_locations, radius, values_per_dimension,
+                               debug):
+    sdm = SDM(address_length, content_length, number_of_hard_locations, radius,
+              values_per_dimension=values_per_dimension, debug=debug)
     return len(sdm.hard_locations)
 
 
