@@ -1,0 +1,34 @@
+general:
+  name: Tests for SDM.py
+
+  tests:
+    - test:
+        call: test_create_hard_locations
+        cases:
+          - case:
+              input:  [10, 10, 20, 2, True]
+              output: 10
+
+    - test:
+        call: hamming_distance
+        cases:
+          - case:
+              input:  ['011', '010']
+              output: 1
+          - case:
+              input:  ['011', '011']
+              output: 0
+          - case:
+              input:  ['011', '000']
+              output: 2
+          - case:
+              input:  ['011', '100']
+              output: 3
+
+    - test:
+        call: test_near_hard_locations
+        cases:
+          - case:
+              input:  ['00110011',3, ['00111111', '10001100', '11110010', '10110100']]
+              output: ['00111111', '11110010']
+
