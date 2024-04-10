@@ -11,6 +11,54 @@ class HardLocationCreation(IntEnum):
     OnDemand  = 3
 
 
+class Address(object):
+    """
+    To be used as an address in an SDM
+    """
+    address_length = 10
+
+    @staticmethod
+    def create_address_from_number(i):
+        return Address('0')
+
+    def __init__(self, value):
+        self.value = value
+
+    def distance(self, other_address):
+        return 0
+
+    def __str__(self):
+        return self.value
+
+
+class BinaryAddress(Address):
+    @staticmethod
+    def create_address_from_number(i):
+        return BinaryAddress(np.binary_repr(i, width=Address.address_length))
+
+    def __init__(self, value):
+        super().__init__(value)
+
+    def distance(self, other_address):
+        return hamming_distance(self.value, other_address.value)
+
+    def get_random_near_address(self, near_distance):
+        """
+        Returns a random address close to the original one (no longer than near_distance)
+        :param near_distance:
+        :return:
+        """
+        new_address = ''
+        to_change = [rn.randint(0, Address.address_length - 1) for _ in range(near_distance)]
+        for i, bit in enumerate(self.value):
+            if i in to_change:
+                bit1 = '1' if bit == '0' else '0'
+            else:
+                bit1 = bit
+            new_address += bit1
+        return BinaryAddress(new_address)
+
+
 class SDM(object):
     """
     Main class with the basic functionalities for any kind of SDM
@@ -18,7 +66,8 @@ class SDM(object):
     """
 
     def __init__(self, address_length, content_length, number_of_hard_locations, radius, values_per_dimension=2,
-                 hard_location_creation=HardLocationCreation.Random, min_near_hard_locations=3, debug=False):
+                 hard_location_creation=HardLocationCreation.Random, min_near_hard_locations=3,
+                 address_class=BinaryAddress, debug=False):
         self.address_length           = address_length
         self.content_length           = content_length
         self.values_per_dimensions    = values_per_dimension
@@ -27,6 +76,8 @@ class SDM(object):
         self.min_near_hard_locations  = min_near_hard_locations
         self.radius                   = radius
         self.hard_locations_creation  = hard_location_creation
+        self.address_class            = address_class
+        self.address_class.address_length = self.address_length
 
         self.hard_locations = self.initialize_hard_location(debug=debug)
 
@@ -66,7 +117,7 @@ class SDM(object):
             hard_locations = []
         elif self.hard_locations_creation == HardLocationCreation.Random:
             hard_locations = create_random_hard_locations(self.number_of_hard_locations, self.max_possible_values,
-                                                          self.address_length, self.content_length, debug=debug)
+                                                          self.address_class, self.content_length, debug=debug)
         elif self.hard_locations_creation == HardLocationCreation.Uniform:
             hard_locations = create_uniform_hard_locations(self.number_of_hard_locations, self.max_possible_values,
                                                            self.address_length, self.content_length, debug=debug)
@@ -87,12 +138,13 @@ class SDM(object):
         :param near_hard_locations:
         :return:
         """
-        new_hard_locations = [address] if len(near_hard_locations) == 0 else near_hard_locations
+        address_obj = self.address_class(address)
+        new_hard_locations = [address_obj] if len(near_hard_locations) == 0 else near_hard_locations
         new_n = len(new_hard_locations)
         if new_n < self.min_near_hard_locations:
             # complement with randomly near locations
             for _ in range(self.min_near_hard_locations - new_n):
-                new_hard_locations.append(random_near_address(address, near_distance))
+                new_hard_locations.append(address_obj.get_random_near_address(near_distance))
         for new_address in new_hard_locations:
             hard_location = create_hard_location(new_address, self.content_length)
             for i, bit in enumerate(content):
@@ -106,8 +158,9 @@ class SDM(object):
         :param distance: distance to be considered near
         :return:
         """
+        address_obj = self.address_class(address)
         hard_in_distance = [hard_location for hard_location in self.hard_locations
-                            if self.address_distance(address, hard_location[0]) <= distance]
+                            if address_obj.distance(hard_location[0]) <= distance]
         return hard_in_distance
 
     def address_distance(self, address1, address2):
@@ -139,33 +192,29 @@ def create_hard_location(address, content_length, counter_type=int):
     return address, np.zeros(content_length, dtype=counter_type)
 
 
-def create_binary_address(i, address_length):
-    return np.binary_repr(i, width=address_length)
-
-
-def create_random_hard_locations(number_of_hard_locations, max_possible_values, address_length,
-                                 content_length, debug=False):
+def create_random_hard_locations(number_of_hard_locations, max_possible_values, address_class, content_length,
+                                 debug=False):
     if debug:
         print('create %s random locations' % number_of_hard_locations)
     hard_locations = []
     for i in range(number_of_hard_locations):
         j       = rn.randint(0, max_possible_values)
-        address = create_binary_address(j, address_length)
+        address = address_class.create_address_from_number(j)
         hard_locations.append(create_hard_location(address, content_length))
         if debug:
             print('   i:%s j:%s address:%s' % (i, j, address))
     return hard_locations
 
 
-def create_uniform_hard_locations(number_of_hard_locations, max_possible_values, address_length,
-                                  content_length, debug=False):
+def create_uniform_hard_locations(number_of_hard_locations, max_possible_values, address_class, content_length,
+                                  debug=False):
     distance = int(max_possible_values / number_of_hard_locations)
     if debug:
         print('create %s hard locations (d:%s)' % (number_of_hard_locations, distance))
     j = distance
     hard_locations = []
     for _ in range(number_of_hard_locations):
-        address = create_binary_address(j, address_length)
+        address = address_class.create_address_from_number(j)
         hard_locations.append(create_hard_location(address, content_length))
         if debug:
             print('   j:%s address:%s' % (j, address))
@@ -173,7 +222,7 @@ def create_uniform_hard_locations(number_of_hard_locations, max_possible_values,
     return hard_locations
 
 
-def random_near_address(address, near_distance):
+def get_random_near_address(address, near_distance):
     """
     Returns a random address close to the original one (no longer than near_distance)
     :param address:
@@ -237,10 +286,11 @@ def test_create_uniform_hard_locations(number_of_hard_locations, max_possible_va
 def test_sdm_write_read(address_length, content_length, number_of_hard_locations, radius, values_per_dimension, debug,
                         hard_locations, writes, reads):
     hard_location_creation = HardLocationCreation.OnDemand if len(hard_locations) == 0 else HardLocationCreation.Nothing
+    address_class = BinaryAddress
     sdm = SDM(address_length, content_length, number_of_hard_locations, radius,
               values_per_dimension=values_per_dimension, hard_location_creation=hard_location_creation,
-              debug=debug)
-    sdm.hard_locations = [create_hard_location(address, content_length) for address in hard_locations]
+              address_class=address_class, debug=debug)
+    sdm.hard_locations = [create_hard_location(address_class(address), content_length) for address in hard_locations]
     for [address, content] in writes:
         sdm.write(address, content)
     if debug:
