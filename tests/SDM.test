@@ -47,7 +47,7 @@ general:
               output: 6
 
     - test:
-        call: random_near_address
+        call: get_random_near_address
         desc: given is a random process, output is never the same
         cases:
           - case:

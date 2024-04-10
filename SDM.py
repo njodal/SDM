@@ -88,9 +88,7 @@ class SDM(object):
             self.create_hard_locations_on_demand(address, content, near_hard_locations)
         else:
             for hard_location in near_hard_locations:
-                for i, bit in enumerate(content):
-                    inc = 1 if bit == '1' else -1
-                    hard_location[1][i] += inc
+                update_hard_location_counters(hard_location, content)
 
     def read(self, address):
         # print('read %s' % address)
@@ -133,7 +131,7 @@ class SDM(object):
         Applies the Dynamic Allocation algorithm as defined in
            https://link.springer.com/content/pdf/10.1007/978-3-540-30115-8_33.pdf
         :param near_distance:
-        :param address:
+        :param address: :type Address
         :param content:
         :param near_hard_locations:
         :return:
@@ -145,10 +143,11 @@ class SDM(object):
             # complement with randomly near locations
             for _ in range(self.min_near_hard_locations - new_n):
                 new_hard_locations.append(address_obj.get_random_near_address(near_distance))
+
+        # store content in each of the new addresses
         for new_address in new_hard_locations:
             hard_location = create_hard_location(new_address, self.content_length)
-            for i, bit in enumerate(content):
-                hard_location[1][i] += 1 if bit == '1' else -1
+            update_hard_location_counters(hard_location, content)
             self.hard_locations.append(hard_location)
 
     def get_hard_locations_in_distance(self, address, distance):
@@ -163,10 +162,6 @@ class SDM(object):
                             if address_obj.distance(hard_location[0]) <= distance]
         return hard_in_distance
 
-    def address_distance(self, address1, address2):
-        # print('   distance from %s to %s is %s' % (address1, address2, hamming_distance(address1, address2)))
-        return hamming_distance(address1, address2)
-
     def print_hard_locations(self, title='Hard Locations'):
         print(title)
         for hard_location in self.hard_locations:
@@ -178,16 +173,13 @@ class BinarySDM(SDM):
     Content is a binary message
     """
 
-    def address_distance(self, address1, address2):
-        return hamming_distance(address1, address2)
-
     def __init__(self, address_length, content_length, number_of_hard_locations, radius,
                  hard_location_creation=HardLocationCreation.Nothing):
         super().__init__(address_length, content_length, number_of_hard_locations, radius, values_per_dimension=2,
-                         hard_location_creation=hard_location_creation)
+                         hard_location_creation=hard_location_creation, address_class=BinaryAddress)
 
 
-# Hard location creation
+# Hard location functions
 def create_hard_location(address, content_length, counter_type=int):
     return address, np.zeros(content_length, dtype=counter_type)
 
@@ -240,6 +232,12 @@ def get_random_near_address(address, near_distance):
     return new_address
 
 
+def update_hard_location_counters(hard_location, content):
+    for i, bit in enumerate(content):
+        inc = 1 if bit == '1' else -1
+        hard_location[1][i] += inc
+
+
 # other functions
 def hamming_distance(binary1, binary2):
     """
@@ -271,14 +269,18 @@ def test_near_hard_locations(address, radius, hard_locations):
 
 def test_create_random_hard_locations(number_of_hard_locations, max_possible_values, address_length, content_length,
                                       debug):
-    hard_locations = create_random_hard_locations(number_of_hard_locations, max_possible_values, address_length,
+    address_class = BinaryAddress
+    address_class.address_length = address_length
+    hard_locations = create_random_hard_locations(number_of_hard_locations, max_possible_values, address_class,
                                                   content_length, debug=debug)
     return len(hard_locations)
 
 
 def test_create_uniform_hard_locations(number_of_hard_locations, max_possible_values, address_length, content_length,
                                        debug):
-    hard_locations = create_uniform_hard_locations(number_of_hard_locations, max_possible_values, address_length,
+    address_class = BinaryAddress
+    address_class.address_length = address_length
+    hard_locations = create_uniform_hard_locations(number_of_hard_locations, max_possible_values, address_class,
                                                    content_length, debug=debug)
     return len(hard_locations)
 
