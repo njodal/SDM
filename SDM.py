@@ -126,7 +126,11 @@ class IntegersAddress(Address):
 
     @staticmethod
     def get_value_from_counters(counters):
-        return [get_int_in_range(value, IntegersAddress.min_value, IntegersAddress.max_value) for value in counters]
+        return [IntegersAddress.get_value_in_range(value) for value in counters]
+
+    @staticmethod
+    def get_value_in_range(value):
+        return get_int_in_range(value, IntegersAddress.min_value, IntegersAddress.max_value)
 
     def __init__(self, value):
         super().__init__(value)
@@ -144,13 +148,14 @@ class IntegersAddress(Address):
         :return:
         """
         new_address = []
-        to_change = [rn.randint(0, len(self.value) - 1) for _ in range(len(self.value))]
-        left_value_to_change = near_distance - 1
+        k           = rn.randint(4, near_distance-1)  # number of elements to change
+        k           = min(len(self.value), k)
+        segments    = get_random_partition(near_distance, k)                   # value to change in each element
+        to_change   = [rn.randint(0, len(self.value) - 1) for _ in range(k)]  # item to change
         for i, value in enumerate(self.value):
-            if i in to_change and left_value_to_change > 1:
-                delta  = rn.randint(1, left_value_to_change)
-                value1 = value + delta
-                left_value_to_change -= delta
+            if i in to_change:
+                sign   = -1 if rn.random() < 0.5 else 1
+                value1 = self.get_value_in_range(value + sign * segments[i])
             else:
                 value1 = value
             new_address.append(value1)
@@ -360,6 +365,37 @@ def create_uniform_hard_locations(number_of_hard_locations, max_possible_values,
 
 
 # other functions
+def get_random_partition(n, k):
+    """
+    Returns a list of k elements whose total value is n
+    :param n:
+    :param k:
+    :return:
+    """
+    # Ensure that k is not greater than n to avoid segments with a value of 0
+    if k > n:
+        raise ValueError("k should not be greater than n to avoid segments with a value of 0.")
+
+    # Generate k-1 unique cut points within the range of 1 to n-1
+    cuts = sorted(rn.sample(range(1, n), k - 1))
+
+    # Initialize the list of segments
+    segments = []
+
+    # The start of the first segment is 0
+    start = 0
+
+    # For each cut point, calculate the segment and update the start for the next one
+    for cut in cuts:
+        segments.append(cut - start)
+        start = cut
+
+    # Add the last segment from the last cut to n
+    segments.append(n - start)
+
+    return segments
+
+
 def hamming_distance(binary1, binary2):
     """
     Returns the Hamming distance between to binary numbers
@@ -452,6 +488,13 @@ def test_arithmetic_sdm_write_read(address_length, content_length, number_of_har
         sdm.print_hard_locations(title='Hard locations after write')
     values = [sdm.read(read) for read in reads]
     return values
+
+
+def test_get_random_partition(n, k, debug):
+    segments = get_random_partition(n, k)
+    if debug:
+        print('segments for %s/%s: %s' % (n, k, segments))
+    return len(segments)
 
 
 if __name__ == "__main__":

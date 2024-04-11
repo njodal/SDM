@@ -113,3 +113,10 @@ general:
               desc:   creates hard locations on demand
               input:  [2, 2, 4, 30, True, [], [[[12, 13], [100, 90]]], [[12, 13], [20, 20], [200, 200]]]
               output: [[100, 90], [100, 90], [0, 0]]
+
+    - test:
+        call: test_get_random_partition
+        cases:
+          - case:
+              input:  [30, 2, True]
+              output: 2
