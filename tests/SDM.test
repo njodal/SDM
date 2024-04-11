@@ -26,11 +26,42 @@ general:
               output: 3
 
     - test:
+        call: test_arithmetic_distance
+        cases:
+          - case:
+              input:  [[90, 95], [100, 106]]
+              output: 21
+          - case:
+              input:  [[90, 95], [250, 200]]
+              output: 265
+          - case:
+              input:  [[90, 95], [110, 90]]
+              output: 25
+          - case:
+              input:  [[90, 95], [10, 9]]
+              output: 166
+
+    - test:
         call: test_near_hard_locations
         cases:
           - case:
               input:  ['00110011',3, ['00111111', '10001100', '11110010', '10110100']]
               output: ['00111111', '11110010']
+
+
+    - test:
+        call: get_int_in_range
+        cases:
+          - case:
+              input:  [100.5, 0, 255]
+              output: 100
+          - case:
+              input:  [-100.5, 0, 255]
+              output: 0
+          - case:
+              input:  [1000.5, 0, 255]
+              output: 255
+
 
     - test:
         call: test_create_random_hard_locations
@@ -47,7 +78,7 @@ general:
               output: 6
 
     - test:
-        call: get_random_near_address
+        call: test_random_near_address
         desc: given is a random process, output is never the same
         cases:
           - case:
@@ -55,13 +86,30 @@ general:
               output: '010100'
 
     - test:
-        call: test_sdm_write_read
+        call: test_binary_sdm_write_read
         cases:
           - case:
               desc:   example from https://arxiv.org/pdf/1207.5774.pdf
-              input:  [6, 6, 4, 1, 2, True, ['111101', '011100', '110100', '101101'], [['111100', '001100']], ['111101', '111100', '01000']]
+              input:  [6, 6, 4, 1, True, ['111101', '011100', '110100', '101101'], [['111100', '001100']], ['111101', '111100', '01000']]
               output: ['001100', '001100', '000000']
           - case:
               desc:   creates hard locations on demand
-              input:  [6, 6, 4, 1, 2, True, [], [['111100', '001100']], ['111101', '111100', '01000']]
-              output: ['001100', '001100', '001100']
+              input:  [6, 6, 4, 1, True, [], [['111100', '001100']], ['111101', '111100', '01000']]
+              output: ['001100', '001100', '000000']
+          - case:
+              desc:   creates hard locations on demand (write same value twice)
+              input:  [6, 6, 4, 1, True, [], [['111100', '001100'], ['111100', '001100']], ['111101', '111100', '01000']]
+              output: ['001100', '001100', '000000']
+
+    - test:
+        call: test_arithmetic_sdm_write_read
+        cases:
+          - case:
+              desc:   example from https://www.iaeng.org/IJCS/issues_v45/issue_1/IJCS_45_1_26.pdf
+              input:  [2, 2, 4, 30, True, [[12, 14], [230, 228], [9, 11], [128, 120]], [[[12, 13], [100, 90]]], [[12, 13], [20, 20], [200, 200]]]
+              output: [[100, 90], [100, 90], [0, 0]]
+
+          - case:
+              desc:   creates hard locations on demand
+              input:  [2, 2, 4, 30, True, [], [[[12, 13], [100, 90]]], [[12, 13], [20, 20], [200, 200]]]
+              output: [[100, 90], [100, 90], [0, 0]]
