@@ -143,7 +143,7 @@ class IntegersAddress(Address):
 
     def get_random_near_address(self, near_distance):
         """
-        Returns a random address close to the original one (no longer than near_distance)
+        Returns a random address close to the original one (no farther than near_distance)
         :param near_distance:
         :return:
         """
@@ -258,14 +258,26 @@ class SDM(object):
         :param near_hard_locations:
         :return:
         """
-        address_obj = self.address_class(address)
+        address_obj        = self.address_class(address)
         new_hard_locations = [address_obj] if len(near_hard_locations) == 0 else near_hard_locations
-        new_n = len(new_hard_locations)
+        new_n              = len(new_hard_locations)
         if new_n < self.min_near_hard_locations:
             # complement with randomly near locations
             for _ in range(self.min_near_hard_locations - new_n):
                 new_hard_locations.append(address_obj.get_random_near_address(near_distance))
-        # ToDo: implement hard_location delete when max allowed reached
+
+        # delete hard locations if maximum in reached
+        tries = 0
+        while len(self.hard_locations) >= self.number_of_hard_locations:
+            to_delete_i = rn.randint(0, len(self.number_of_hard_locations)-1)
+            to_delete_hard_location = self.hard_locations[to_delete_i]
+            if to_delete_hard_location[0] in new_hard_locations:
+                # do not delete the active ones
+                tries += 1
+                if tries > 1000:
+                    raise Exception('too much tries deleting hard locations')
+                continue
+            del self.hard_locations[to_delete_i]
 
         # store content in each of the new addresses
         for new_address in new_hard_locations:
